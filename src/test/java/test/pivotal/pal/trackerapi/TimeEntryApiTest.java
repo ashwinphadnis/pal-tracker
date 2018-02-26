@@ -115,7 +115,7 @@ public class TimeEntryApiTest {
         ResponseEntity<String> deletedReadResponse = this.restTemplate.getForEntity("/time-entries/" + id, String.class);
         assertThat(deletedReadResponse.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
-
+// test
     private Long createTimeEntry() {
 
         HttpEntity<TimeEntry> entity = new HttpEntity<>(timeEntry);
