@@ -8,8 +8,10 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.embedded.LocalServerPort;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -34,26 +36,21 @@ public class TimeEntryApiTest {
 
     private TimeEntry timeEntry = new TimeEntry(123L, 456L, LocalDate.parse("2017-01-08"), 8);
 
+    @LocalServerPort
+    private String port;
 
     @Test
     public void testList() throws Exception {
         Long id = createTimeEntry();
 
-        System.out.println("From testList");
-
         ResponseEntity<String> listResponse = restTemplate.getForEntity("/time-entries", String.class);
 
         assertThat(listResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
-        System.out.println("This is the test");
 
         DocumentContext listJson = parse(listResponse.getBody());
 
-        System.out.println(listJson.jsonString());
-
         Collection timeEntries = listJson.read("$[*]", Collection.class);
         assertThat(timeEntries.size()).isEqualTo(1);
-
-
 
         Long readId = listJson.read("$[0].id", Long.class);
         assertThat(readId).isEqualTo(id);
@@ -61,10 +58,7 @@ public class TimeEntryApiTest {
     @Test
     public void testCreate() throws Exception {
 
-        System.out.println("From testCreate");
-
         ResponseEntity<String> createResponse = restTemplate.postForEntity("/time-entries", timeEntry, String.class);
-
 
         assertThat(createResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
 
@@ -78,13 +72,9 @@ public class TimeEntryApiTest {
     @Test
     public void testRead() throws Exception {
 
-        System.out.println("From testRead");
-
         Long id = createTimeEntry();
 
-
         ResponseEntity<String> readResponse = this.restTemplate.getForEntity("/time-entries/" + id, String.class);
-
 
         assertThat(readResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
         DocumentContext readJson = parse(readResponse.getBody());
@@ -98,14 +88,10 @@ public class TimeEntryApiTest {
     @Test
     public void testUpdate() throws Exception {
 
-        System.out.println("From testUpdate");
-
         Long id = createTimeEntry();
         TimeEntry updatedTimeEntry = new TimeEntry(2L, 3L, LocalDate.parse("2017-01-09"), 9);
 
-
         ResponseEntity<String> updateResponse = restTemplate.exchange("/time-entries/" + id, HttpMethod.PUT, new HttpEntity<>(updatedTimeEntry, null), String.class);
-
 
         assertThat(updateResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
 
@@ -120,8 +106,6 @@ public class TimeEntryApiTest {
     @Test
     public void testDelete() throws Exception {
 
-        System.out.println("From testDelete");
-
         Long id = createTimeEntry();
 
         ResponseEntity<String> deleteResponse = restTemplate.exchange("/time-entries/" + id, HttpMethod.DELETE, null, String.class);
@@ -133,8 +117,6 @@ public class TimeEntryApiTest {
     }
 
     private Long createTimeEntry() {
-
-        System.out.println("From createTimeEntry");
 
         HttpEntity<TimeEntry> entity = new HttpEntity<>(timeEntry);
 
@@ -148,10 +130,14 @@ public class TimeEntryApiTest {
     @Before
     public void setUp() throws Exception {
 
-        System.out.println("From setUp");
-
         MysqlDataSource dataSource = new MysqlDataSource();
         dataSource.setUrl(System.getenv("SPRING_DATASOURCE_URL"));
+
+        RestTemplateBuilder builder = new RestTemplateBuilder()
+                .rootUri("http://localhost:" + port)
+                .basicAuthorization("user", "password");
+
+        restTemplate = new TestRestTemplate(builder);
 
         JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
         jdbcTemplate.execute("TRUNCATE time_entries");
